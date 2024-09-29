@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>세 자리 수의 연산 게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 스타일 -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f9fafb;
+            margin: 0;
+            padding: 0;
+        }
+        #gameTitle {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            font-size: 2em;
+        }
+        #scoreBoard {
+            margin: 20px;
+            font-size: 1.2em;
+        }
+        #energyBarContainer {
+            width: 80%;
+            height: 20px;
+            background-color: #ddd;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #energyBar {
+            width: 100%;
+            height: 100%;
+            background-color: #34d399;
+            transition: width 0.1s linear;
+        }
+        #questionDisplay {
+            font-size: 2em;
+            margin: 30px;
+        }
+        #buttonsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+        }
+        .answerButton {
+            width: 40%;
+            max-width: 200px;
+            margin: 10px;
+            padding: 15px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #fff;
+            border: 2px solid #2563eb;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .answerButton:hover {
+            background-color: #2563eb;
+            color: #fff;
+        }
+        #resultMessage {
+            font-size: 1.5em;
+            margin: 20px;
+            height: 40px;
+        }
+        #finalScore {
+            font-size: 2em;
+            margin: 50px;
+            color: #d32f2f;
+        }
+        #startButton {
+            font-size: 1.5em;
+            padding: 15px 30px;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            margin-top: 30px;
+        }
+        #startButton:hover {
+            background-color: #1e40af;
+        }
+        #watermark {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 1em;
+            color: rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameTitle">세 자리 수의 연산 게임</div>
+    <div id="scoreBoard">점수: <span id="score">0</span> | 남은 기회: <span id="lives">3</span>/3</div>
+    <div id="energyBarContainer">
+        <div id="energyBar"></div>
+    </div>
+    <div id="questionDisplay"></div>
+    <div id="buttonsContainer"></div>
+    <div id="resultMessage"></div>
+    <button id="startButton">게임 시작하기</button>
+    <div id="finalScore"></div>
+
+    <!-- 워터마크 -->
+    <div id="watermark">휘매쓰</div>
+
+    <!-- 스크립트 -->
+    <script>
+        let score = 0;
+        let lives = 3;
+        let timeLimit = 40000; // 초기 제한 시간 40초
+        let timeRemaining;
+        let energyBarInterval;
+        let questionCount = 0;
+
+        const questionDisplay = document.getElementById('questionDisplay');
+        const buttonsContainer = document.getElementById('buttonsContainer');
+        const resultMessage = document.getElementById('resultMessage');
+        const finalScore = document.getElementById('finalScore');
+        const startButton = document.getElementById('startButton');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const energyBar = document.getElementById('energyBar');
+
+        const questions = [
+            { text: "10이 10개면 ?입니다.", answer: 100 },
+            { text: "90보다 10만큼 더 큰 수는 ?입니다.", answer: 100 },
+            { text: "10이 9개, 1이 10개면 ?입니다.", answer: 100 },
+            { text: "100이 2개, 10이 9개, 1이 10개면 ?입니다.", answer: 300 },
+            { text: "100이 3개, 10이 0개, 1이 5개면 ?입니다.", answer: 305 },
+            { text: "100이 1개, 10이 8개, 1이 7개면 ?입니다.", answer: 187 },
+            { text: "10이 12개면 ?입니다.", answer: 120 },
+            { text: "100보다 50만큼 더 큰 수는 ?입니다.", answer: 150 },
+            { text: "10이 5개, 1이 50개면 ?입니다.", answer: 100 },
+            { text: "100이 1개, 10이 9개, 1이 2개면 ?입니다.", answer: 192 },
+            { text: "100보다 200만큼 더 큰 수는 ?입니다.", answer: 300 },
+            { text: "100이 5개, 10이 0개, 1이 1개면 ?입니다.", answer: 501 },
+            { text: "10이 6개, 1이 4개면 ?입니다.", answer: 64 },
+            { text: "100이 7개, 1이 15개면 ?입니다.", answer: 715 },
+            { text: "100이 9개, 10이 3개면 ?입니다.", answer: 930 },
+            { text: "10이 4개, 1이 12개면 ?입니다.", answer: 52 },
+            { text: "90보다 5만큼 더 큰 수는 ?입니다.", answer: 95 },
+            { text: "80보다 20만큼 더 큰 수는 ?입니다.", answer: 100 },
+            { text: "60보다 40만큼 더 큰 수는 ?입니다.", answer: 100 },
+            { text: "30보다 70만큼 더 큰 수는 ?입니다.", answer: 100 },
+            { text: "90보다 1만큼 더 큰 수는 ?입니다.", answer: 91 },
+            { text: "10이 15개면 ?입니다.", answer: 150 },
+            { text: "90이 1개, 10이 3개면 ?입니다.", answer: 120 },
+            { text: "100이 1개, 10이 6개면 ?입니다.", answer: 160 },
+            { text: "100이 8개, 1이 8개면 ?입니다.", answer: 808 },
+            { text: "100이 10개, 10이 2개면 ?입니다.", answer: 1020 },
+            { text: "10이 8개면 ?입니다.", answer: 80 },
+            { text: "100이 4개, 10이 5개면 ?입니다.", answer: 450 },
+            { text: "100이 6개, 10이 9개면 ?입니다.", answer: 690 },
+            { text: "100이 1개, 10이 10개면 ?입니다.", answer: 200 },
+            { text: "100이 3개, 1이 3개면 ?입니다.", answer: 303 },
+            { text: "10이 7개, 1이 9개면 ?입니다.", answer: 79 },
+            { text: "100이 2개, 10이 3개면 ?입니다.", answer: 230 },
+            { text: "100이 7개, 1이 7개면 ?입니다.", answer: 707 },
+            { text: "100이 5개, 10이 6개면 ?입니다.", answer: 560 },
+            { text: "10이 3개면 ?입니다.", answer: 30 },
+            { text: "10이 2개면 ?입니다.", answer: 20 },
+            { text: "90보다 2만큼 더 큰 수는 ?입니다.", answer: 92 },
+            { text: "100이 1개, 1이 1개면 ?입니다.", answer: 101 },
+            { text: "100이 9개면 ?입니다.", answer: 900 },
+            { text: "100이 5개, 10이 4개면 ?입니다.", answer: 540 },
+            { text: "100이 2개, 1이 20개면 ?입니다.", answer: 220 },
+            { text: "100이 3개, 10이 9개면 ?입니다.", answer: 390 },
+            { text: "100이 7개, 10이 5개면 ?입니다.", answer: 750 },
+            { text: "90보다 3만큼 더 큰 수는 ?입니다.", answer: 93 },
+            { text: "10이 6개, 1이 12개면 ?입니다.", answer: 72 },
+            { text: "100이 1개, 1이 2개면 ?입니다.", answer: 102 },
+            { text: "90이 1개, 10이 4개면 ?입니다.", answer: 130 }
+        ];
+
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            timeLimit = 40000;
+            finalScore.textContent = '';
+            resultMessage.textContent = '';
+            startButton.style.display = 'none';
+            updateScoreBoard();
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            const selectedQuestion = questions[Math.floor(Math.random() * questions.length)];
+            questionDisplay.textContent = selectedQuestion.text;
+
+            const correctAnswer = selectedQuestion.answer;
+            const options = [correctAnswer];
+
+            while (options.length < 4) {
+                const wrongAnswer = correctAnswer + getRandomInt(-50, 50);
+                if (!options.includes(wrongAnswer)) {
+                    options.push(wrongAnswer);
+                }
+            }
+
+            options.sort(() => Math.random() - 0.5);
+            buttonsContainer.innerHTML = '';
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.classList.add('answerButton');
+                button.textContent = option;
+                button.addEventListener('click', () => checkAnswer(option, correctAnswer));
+                buttonsContainer.appendChild(button);
+            });
+
+            startTimer(); // 문제마다 타이머 시작
+        }
+
+        function checkAnswer(selectedAnswer, correctAnswer) {
+            clearInterval(energyBarInterval);
+            if (selectedAnswer === correctAnswer) {
+                score += 10;
+                resultMessage.style.color = 'green';
+                resultMessage.textContent = '정답입니다!';
+            } else {
+                lives--;
+                resultMessage.style.color = 'red';
+                resultMessage.textContent = '오답입니다!';
+            }
+            updateScoreBoard();
+            if (lives > 0) {
+                setTimeout(nextQuestion, 1000);
+            } else {
+                endGame();
+            }
+        }
+
+        function startTimer() {
+            timeRemaining = timeLimit;
+            updateEnergyBar();
+            energyBarInterval = setInterval(() => {
+                timeRemaining -= 100; // 100ms마다 감소
+                updateEnergyBar();
+                if (timeRemaining <= 0) {
+                    clearInterval(energyBarInterval);
+                    lives--;
+                    resultMessage.style.color = 'red';
+                    resultMessage.textContent = '시간 초과!';
+                    updateScoreBoard();
+                    if (lives > 0) {
+                        setTimeout(nextQuestion, 1000);
+                    } else {
+                        endGame();
+                    }
+                }
+            }, 100);
+        }
+
+        function updateEnergyBar() {
+            const width = (timeRemaining / timeLimit) * 100;
+            energyBar.style.width = width + '%';
+        }
+
+        function updateScoreBoard() {
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+        }
+
+        function endGame() {
+            buttonsContainer.innerHTML = '';
+            questionDisplay.textContent = '';
+            finalScore.textContent = `게임 종료! 총점: ${score}점`;
+            startButton.textContent = '다시 시작하기';
+            startButton.style.display = 'inline-block';
+        }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+    </script>
+
+</body>
+</html>
